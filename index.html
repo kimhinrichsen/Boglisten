@@ -6,25 +6,41 @@
     <title>Simpel E-bogslæser</title>
     <link rel="icon" href="data:,"> <!-- Undgå favicon 404-fejl -->
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        * {
+            box-sizing: border-box;
             margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Georgia', serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
             padding: 20px;
-            background-color: #f4f4f4;
         }
         #book-list {
             max-width: 800px;
             margin: 0 auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        #book-list h2 {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            color: #2c3e50;
         }
         #book-list ul {
             list-style: none;
-            padding: 0;
         }
         #book-list li {
-            padding: 10px;
-            background: #fff;
-            margin-bottom: 5px;
+            padding: 15px;
+            background: #f9f9f9;
+            margin-bottom: 10px;
+            border-radius: 5px;
             cursor: pointer;
+            transition: background 0.3s;
         }
         #book-list li:hover {
             background: #e0e0e0;
@@ -34,20 +50,48 @@
             max-width: 800px;
             margin: 20px auto;
             background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             padding: 20px;
-            border: 1px solid #ccc;
         }
         #book-content {
             white-space: pre-wrap;
-            font-size: 16px;
-            line-height: 1.6;
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #333;
         }
         #controls {
+            display: flex;
+            gap: 10px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
         #controls button {
-            margin-right: 10px;
-            padding: 5px 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #2c3e50;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        #controls button:hover {
+            background: #34495e;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            #book-list, #reader {
+                padding: 15px;
+            }
+            #book-list h2 {
+                font-size: 1.5em;
+            }
+            #controls button {
+                padding: 8px 15px;
+                font-size: 0.9em;
+            }
         }
     </style>
 </head>
@@ -67,7 +111,7 @@
     </div>
 
     <script>
-        // Hardkodet bogliste
+        // Hardkodet bogliste (kan udvides eller erstattes med dynamisk hentning senere)
         const books = [
             { title: "Pride and Prejudice", id: "1342" },
             { title: "Frankenstein", id: "84" },
@@ -86,14 +130,41 @@
             });
         }
 
-        // Dummy-indhold for at teste læsegrænsefladen
-        function fetchBookContent(bookId) {
-            // Midlertidig dummy-tekst i stedet for at hente fra Project Gutenberg
-            const dummyText = `Dette er en testtekst for bogen med ID ${bookId}.\n\nImagine dette er indholdet af "${books.find(b => b.id === bookId).title}".\n\nDu kan klikke på knapperne ovenfor for at ændre skriftstørrelse eller gemme et bogmærke.`;
-            document.getElementById('book-content').textContent = dummyText;
-            document.getElementById('book-list').style.display = 'none';
-            document.getElementById('reader').style.display = 'block';
-            currentBookId = bookId;
+        // Hent bogindhold fra Project Gutenberg
+        async function fetchBookContent(bookId) {
+            const urls = [
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.gutenberg.org/files/${bookId}/${bookId}-0.txt`)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.gutenberg.org/files/${bookId}/${bookId}.txt`)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.gutenberg.org/files/${bookId}/${bookId}-h.htm`)}`
+            ];
+
+            for (const url of urls) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        console.error(`Fejl ved hentning af ${url}: ${response.status}`);
+                        continue;
+                    }
+                    const contentType = response.headers.get('content-type');
+                    let text;
+                    if (contentType.includes('text/html')) {
+                        text = await response.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(text, 'text/html');
+                        text = doc.body.textContent || 'Kunne ikke parse HTML-indhold';
+                    } else {
+                        text = await response.text();
+                    }
+                    document.getElementById('book-content').textContent = text;
+                    document.getElementById('book-list').style.display = 'none';
+                    document.getElementById('reader').style.display = 'block';
+                    currentBookId = bookId;
+                    return;
+                } catch (error) {
+                    console.error(`Fejl ved forsøg på ${url}:`, error);
+                }
+            }
+            alert('Kunne ikke hente bogen. Prøv en anden.');
         }
 
         // Skift skriftstørrelse
