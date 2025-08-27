@@ -208,14 +208,14 @@
             try {
                 let data;
                 const cachedData = getCachedData();
-                if (cachedData) {
+                if (cachedData && cachedData.results.length === 12) {
                     data = cachedData;
                 } else {
                     const response = await fetch('https://gutendex.com/books?limit=12');
                     data = await response.json();
                     cacheData(data);
                 }
-                bookList = data.results;
+                bookList = data.results.slice(0, 12); // Begræns til præcist 12 titler
                 displayBookshelf();
             } catch (error) {
                 console.error('Fejl ved hentning af bogliste:', error);
@@ -235,15 +235,15 @@
                 const bookElement = document.createElement('div');
                 bookElement.className = 'book';
                 const img = document.createElement('img');
-                img.setAttribute('data-src', await getBookCover(book));
-                img.onload = () => img.style.opacity = 1;
+                img.setAttribute('data-src', await getBookCover(book)); // Lazy loading
+                img.onload = () => img.style.opacity = 1; // Fade-in effekt
                 img.style.opacity = 0;
                 bookElement.innerHTML = `
                     <div>${img.outerHTML}</div>
                     <div class="title">${book.title.substring(0, 20)}${book.title.length > 20 ? '...' : ''}</div>
                     <div class="author">${book.authors[0]?.name || 'Ukendt forfatter'}</div>
                 `;
-                bookElement.onclick = () => fetchBookContent(book.id);
+                bookElement.onclick = () => fetchBookContent(book.id); // Sikrer klikfunktion
                 fragment.appendChild(bookElement);
             }
             shelf.appendChild(fragment);
@@ -339,7 +339,7 @@
         // Opdater side-tæller
         function updatePageCounter() {
             document.getElementById('page-counter').textContent = `Læste sider: ${totalPagesRead}`;
-            localStorage.setItem('totalPagesRead', totalPagesRead); // Gem global tælling
+            localStorage.setItem('totalPagesRead', totalPagesRead);
         }
 
         // Næste side
@@ -349,7 +349,7 @@
                 rightPage.classList.add('page-turn-right');
                 setTimeout(() => {
                     currentPage += 2;
-                    totalPagesRead += 2; // Optæl 2 sider globalt
+                    totalPagesRead += 2;
                     updatePages();
                     updatePageCounter();
                 }, 500);
@@ -363,7 +363,7 @@
                 leftPage.classList.add('page-turn-left');
                 setTimeout(() => {
                     currentPage -= 2;
-                    totalPagesRead = Math.max(0, totalPagesRead - 2); // Reducer, men ikke under 0
+                    totalPagesRead = Math.max(0, totalPagesRead - 2);
                     updatePages();
                     updatePageCounter();
                 }, 500);
