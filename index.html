@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simpel E-bogslæser</title>
+    <link rel="icon" href="data:,"> <!-- Undgå favicon 404-fejl -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -44,7 +45,7 @@
         #controls {
             margin-bottom: 20px;
         }
-        #controls button, #controls select {
+        #controls button {
             margin-right: 10px;
             padding: 5px 10px;
         }
@@ -66,33 +67,15 @@
     </div>
 
     <script>
-        // Hent top-100 bøger fra Project Gutenberg
-        async function fetchBookList() {
-            const url = 'https://www.gutenberg.org/browse/scores/top';
-            try {
-                const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const bookItems = doc.querySelectorAll('#books-last30 a[href*="/ebooks/"]');
-                const books = [];
-
-                bookItems.forEach(item => {
-                    const title = item.textContent.trim();
-                    const href = item.getAttribute('href');
-                    if (href && title) {
-                        books.push({ title, id: href.split('/ebooks/')[1] });
-                    }
-                });
-
-                displayBookList(books.slice(0, 20)); // Begræns til 20 bøger for enkelhed
-            } catch (error) {
-                console.error('Fejl ved hentning af bogliste:', error);
-            }
-        }
+        // Hardkodet bogliste
+        const books = [
+            { title: "Pride and Prejudice", id: "1342" },
+            { title: "Frankenstein", id: "84" },
+            { title: "The Adventures of Sherlock Holmes", id: "1661" }
+        ];
 
         // Vis bogliste
-        function displayBookList(books) {
+        function displayBookList() {
             const bookList = document.getElementById('books');
             bookList.innerHTML = '';
             books.forEach(book => {
@@ -103,20 +86,14 @@
             });
         }
 
-        // Hent bogindhold
-        async function fetchBookContent(bookId) {
-            const url = `https://www.gutenberg.org/files/${bookId}/${bookId}-0.txt`;
-            try {
-                const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
-                const text = await response.text();
-                document.getElementById('book-content').textContent = text;
-                document.getElementById('book-list').style.display = 'none';
-                document.getElementById('reader').style.display = 'block';
-                currentBookId = bookId; // Gem for bogmærker
-            } catch (error) {
-                console.error('Fejl ved hentning af bog:', error);
-                alert('Kunne ikke hente bogen. Prøv en anden.');
-            }
+        // Dummy-indhold for at teste læsegrænsefladen
+        function fetchBookContent(bookId) {
+            // Midlertidig dummy-tekst i stedet for at hente fra Project Gutenberg
+            const dummyText = `Dette er en testtekst for bogen med ID ${bookId}.\n\nImagine dette er indholdet af "${books.find(b => b.id === bookId).title}".\n\nDu kan klikke på knapperne ovenfor for at ændre skriftstørrelse eller gemme et bogmærke.`;
+            document.getElementById('book-content').textContent = dummyText;
+            document.getElementById('book-list').style.display = 'none';
+            document.getElementById('reader').style.display = 'block';
+            currentBookId = bookId;
         }
 
         // Skift skriftstørrelse
@@ -126,7 +103,7 @@
             bookContent.style.fontSize = `${currentSize + delta}px`;
         }
 
-        // Gem bogmærke (scroll-position og bog-id)
+        // Gem bogmærke
         let currentBookId = null;
         function saveBookmark() {
             if (currentBookId) {
@@ -142,21 +119,8 @@
             document.getElementById('book-list').style.display = 'block';
         }
 
-        // Indlæs bogmærke ved bogåbning
-        function loadBookmark() {
-            if (currentBookId) {
-                const scrollPos = localStorage.getItem(`bookmark_${currentBookId}`);
-                if (scrollPos) {
-                    document.getElementById('reader').scrollTop = scrollPos;
-                }
-            }
-        }
-
         // Start applikationen
-        fetchBookList();
-
-        // Lyt efter læsning for at gendanne bogmærke
-        document.getElementById('reader').addEventListener('click', loadBookmark);
+        displayBookList();
     </script>
 </body>
 </html>
