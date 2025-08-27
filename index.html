@@ -13,17 +13,26 @@
         }
         body {
             font-family: Arial, sans-serif;
-            background: #f4f4f4;
+            background: #e8e4d9;
             color: #333;
             padding: 20px;
+            overflow-x: hidden;
         }
         #bookshelf {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 20px;
+            background: url('https://www.transparenttextures.com/patterns/wood-pattern.png') repeat, #8b6f47;
+            border: 2px solid #5c4033;
+            border-radius: 5px;
+            padding: 20px;
+        }
+        .shelf {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 20px;
-            padding: 20px;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 10px 0;
         }
         .book {
             background: #fff;
@@ -33,6 +42,10 @@
             cursor: pointer;
             transition: transform 0.3s, box-shadow 0.3s;
             text-align: center;
+            height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
         .book:hover {
             transform: scale(1.05);
@@ -44,12 +57,12 @@
             object-fit: cover;
         }
         .book .title {
-            padding: 10px;
+            padding: 5px;
             font-size: 0.9em;
             font-weight: bold;
         }
         .book .author {
-            padding: 0 10px 10px;
+            padding: 0 5px 5px;
             font-size: 0.8em;
             color: #666;
         }
@@ -57,14 +70,14 @@
             display: block;
             margin: 20px auto;
             padding: 10px 20px;
-            background: #2c3e50;
+            background: #5c4033;
             color: #fff;
             border: none;
             border-radius: 5px;
             cursor: pointer;
         }
         #load-more:hover {
-            background: #34495e;
+            background: #7a5c46;
         }
         #reader-overlay {
             display: none;
@@ -96,6 +109,7 @@
             justify-content: space-between;
             gap: 10px;
             overflow-y: auto;
+            flex: 1;
         }
         .book-page {
             width: 48%;
@@ -129,16 +143,19 @@
             padding: 10px 20px;
             border: none;
             border-radius: 5px;
-            background: #2c3e50;
+            background: #5c4033;
             color: #fff;
             cursor: pointer;
         }
         #controls button:hover {
-            background: #34495e;
+            background: #7a5c46;
         }
         @media (max-width: 700px) {
-            #bookshelf {
+            .shelf {
                 grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+            .book {
+                height: 200px;
             }
             .book img {
                 height: 150px;
@@ -155,8 +172,7 @@
 </head>
 <body>
     <div id="bookshelf">
-        <h2>Bogreol</h2>
-        <div id="books"></div>
+        <div id="shelves"></div>
         <button id="load-more">Load flere bøger</button>
     </div>
     <div id="reader-overlay">
@@ -201,25 +217,32 @@
 
         // Vis bogreol
         async function displayBookshelf() {
-            const booksContainer = document.getElementById('books');
-            booksContainer.innerHTML = '';
-            for (const book of bookList) {
+            const shelvesContainer = document.getElementById('shelves');
+            shelvesContainer.innerHTML = '';
+            const shelves = [];
+            for (let i = 0; i < Math.ceil(bookList.length / 10); i++) {
+                const shelf = document.createElement('div');
+                shelf.className = 'shelf';
+                shelves.push(shelf);
+                shelvesContainer.appendChild(shelf);
+            }
+            for (let i = 0; i < bookList.length; i++) {
+                const book = bookList[i];
                 const bookElement = document.createElement('div');
                 bookElement.className = 'book';
                 const coverUrl = await getBookCover(book);
                 bookElement.innerHTML = `
                     <img src="${coverUrl}" alt="${book.title}">
-                    <div class="title">${book.title}</div>
+                    <div class="title">${book.title.substring(0, 20)}${book.title.length > 20 ? '...' : ''}</div>
                     <div class="author">${book.authors[0]?.name || 'Ukendt forfatter'}</div>
                 `;
                 bookElement.onclick = () => fetchBookContent(book.id);
-                booksContainer.appendChild(bookElement);
+                shelves[Math.floor(i / 10)].appendChild(bookElement);
             }
         }
 
         // Hent bogomslag fra Open Library eller brug placeholder
         async function getBookCover(book) {
-            // Prøv Open Library med ISBN eller titel
             const title = encodeURIComponent(book.title);
             try {
                 const response = await fetch(`https://openlibrary.org/search.json?title=${title}`);
@@ -230,8 +253,8 @@
             } catch (error) {
                 console.error('Fejl ved hentning af cover:', error);
             }
-            // Fallback: Generer placeholder-cover
-            return `https://via.placeholder.com/150x200.png?text=${encodeURIComponent(book.title)}`;
+            // Placeholder med titel
+            return `https://via.placeholder.com/150x200.png?text=${encodeURIComponent(book.title.substring(0, 20))}`;
         }
 
         // Hent bogindhold fra Project Gutenberg
