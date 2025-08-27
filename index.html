@@ -21,7 +21,7 @@
         #book-list {
             max-width: 800px;
             margin: 0 auto;
-            background: url('https://www.transparenttextures.com/patterns/old-wall.png');
+            background: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
             border: 5px solid #3c2f2f;
             border-radius: 10px;
             box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
@@ -39,7 +39,7 @@
         }
         #book-list li {
             padding: 15px;
-            background: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
+            background: url('https://www.transparenttextures.com/patterns/cream-pixels.png');
             margin-bottom: 10px;
             border: 1px solid #8b6f47;
             border-radius: 5px;
@@ -52,43 +52,60 @@
         }
         #reader {
             display: none;
-            max-width: 800px;
+            max-width: 900px;
             margin: 20px auto;
-            background: url('https://www.transparenttextures.com/patterns/paper-fibers.png') repeat;
+            background: url('https://www.transparenttextures.com/patterns/leather.png');
             border: 10px solid #3c2f2f;
             border-radius: 15px;
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5), 0 5px 15px rgba(0, 0, 0, 0.7);
-            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
             position: relative;
-            overflow: hidden;
         }
-        #book-content {
-            white-space: pre-wrap;
-            font-size: 1.2em;
-            line-height: 1.9;
-            color: #3c2f2f;
-            background: url('https://www.transparenttextures.com/patterns/cream-pixels.png');
+        .book-page {
+            width: 48%;
+            height: 500px; /* Fast sidehøjde for paginering */
+            background: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
             padding: 20px;
             border-radius: 5px;
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
-            transition: transform 0.5s ease-in-out;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            position: relative;
+            transition: transform 0.7s ease-in-out;
+        }
+        #left-page {
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+        }
+        #right-page {
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+        }
+        .page-turn-right {
+            transform: perspective(1000px) rotateY(-30deg);
+            transform-origin: right;
+        }
+        .page-turn-left {
+            transform: perspective(1000px) rotateY(30deg);
+            transform-origin: left;
         }
         #controls {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            justify-content: center;
+            gap: 10px;
             flex-wrap: wrap;
+            z-index: 10;
         }
         #controls button {
-            padding: 10px 20px;
+            padding: 8px 15px;
             border: 2px solid #8b6f47;
             border-radius: 5px;
             background: url('https://www.transparenttextures.com/patterns/leather.png');
             color: #fff;
             cursor: pointer;
             font-family: 'Times New Roman', serif;
-            font-size: 1em;
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
             transition: background 0.3s, transform 0.2s;
         }
@@ -96,29 +113,27 @@
             background: url('https://www.transparenttextures.com/patterns/leather.png') #4a3723;
             transform: scale(1.05);
         }
-        /* Sidevendingseffekt */
-        .page-turn {
-            transform: perspective(1000px) rotateY(-10deg);
-            transform-origin: right;
-        }
         @media (max-width: 600px) {
             body {
                 padding: 10px;
             }
-            #book-list, #reader {
+            #reader {
+                flex-direction: column;
                 padding: 15px;
-                border-width: 5px;
             }
-            #book-list h2 {
-                font-size: 1.5em;
+            .book-page {
+                width: 100%;
+                height: 400px;
+                margin-bottom: 10px;
+            }
+            #controls {
+                position: static;
+                transform: none;
+                justify-content: center;
             }
             #controls button {
-                padding: 8px 15px;
+                padding: 6px 12px;
                 font-size: 0.9em;
-            }
-            #book-content {
-                font-size: 1em;
-                padding: 15px;
             }
         }
     </style>
@@ -134,9 +149,11 @@
             <button onclick="changeFontSize(2)">+ Skrift</button>
             <button onclick="saveBookmark()">Gem bogmærke</button>
             <button onclick="goBack()">Tilbage</button>
+            <button onclick="prevPage()">Forrige side</button>
             <button onclick="nextPage()">Næste side</button>
         </div>
-        <div id="book-content"></div>
+        <div id="left-page" class="book-page"></div>
+        <div id="right-page" class="book-page"></div>
     </div>
 
     <script>
@@ -158,6 +175,11 @@
                 bookList.appendChild(li);
             });
         }
+
+        // Globale variabler til paginering
+        let currentBookId = null;
+        let currentPage = 0;
+        let pages = [];
 
         // Hent bogindhold fra Project Gutenberg
         async function fetchBookContent(bookId) {
@@ -184,12 +206,13 @@
                     } else {
                         text = await response.text();
                     }
-                    document.getElementById('book-content').textContent = text;
-                    document.getElementById('book-list').style.display = 'none';
-                    document.getElementById('reader').style.display = 'block';
+                    // Opdel tekst i sider
+                    pages = paginateText(text);
                     currentBookId = bookId;
-                    currentPage = 0; // Nulstil side
-                    updatePage();
+                    currentPage = 0;
+                    updatePages();
+                    document.getElementById('book-list').style.display = 'none';
+                    document.getElementById('reader').style.display = 'flex';
                     return;
                 } catch (error) {
                     console.error(`Fejl ved forsøg på ${url}:`, error);
@@ -198,20 +221,65 @@
             alert('Kunne ikke hente bogen. Prøv en anden.');
         }
 
+        // Opdel tekst i sider
+        function paginateText(text) {
+            const words = text.split(/\s+/);
+            const pageSize = 200; // Antal ord pr. side, juster efter behov
+            const pages = [];
+            for (let i = 0; i < words.length; i += pageSize) {
+                pages.push(words.slice(i, i + pageSize).join(' '));
+            }
+            return pages;
+        }
+
+        // Opdater vist sideindhold
+        function updatePages() {
+            const leftPage = document.getElementById('left-page');
+            const rightPage = document.getElementById('right-page');
+            leftPage.textContent = pages[currentPage] || '';
+            rightPage.textContent = pages[currentPage + 1] || '';
+            leftPage.classList.remove('page-turn-right', 'page-turn-left');
+            rightPage.classList.remove('page-turn-right', 'page-turn-left');
+        }
+
+        // Næste side med animation
+        function nextPage() {
+            if (currentPage + 2 < pages.length) {
+                const rightPage = document.getElementById('right-page');
+                rightPage.classList.add('page-turn-right');
+                setTimeout(() => {
+                    currentPage += 2;
+                    updatePages();
+                }, 700); // Vent på animation
+            }
+        }
+
+        // Forrige side med animation
+        function prevPage() {
+            if (currentPage > 0) {
+                const leftPage = document.getElementById('left-page');
+                leftPage.classList.add('page-turn-left');
+                setTimeout(() => {
+                    currentPage -= 2;
+                    updatePages();
+                }, 700); // Vent på animation
+            }
+        }
+
         // Skift skriftstørrelse
         function changeFontSize(delta) {
-            const bookContent = document.getElementById('book-content');
-            const currentSize = parseFloat(window.getComputedStyle(bookContent).fontSize);
-            bookContent.style.fontSize = `${currentSize + delta}px`;
+            const pages = document.querySelectorAll('.book-page');
+            pages.forEach(page => {
+                const currentSize = parseFloat(window.getComputedStyle(page).fontSize);
+                page.style.fontSize = `${currentSize + delta}px`;
+            });
         }
 
         // Gem bogmærke
-        let currentBookId = null;
         function saveBookmark() {
             if (currentBookId) {
-                const scrollPos = document.getElementById('reader').scrollTop;
-                localStorage.setItem(`bookmark_${currentBookId}`, scrollPos);
-                alert('Bogmærke gemt!');
+                localStorage.setItem(`bookmark_${currentBookId}`, currentPage);
+                alert('Bogmærke gemt på side ' + currentPage);
             }
         }
 
@@ -219,26 +287,8 @@
         function goBack() {
             document.getElementById('reader').style.display = 'none';
             document.getElementById('book-list').style.display = 'block';
-            document.getElementById('book-content').classList.remove('page-turn');
-        }
-
-        // Simuler sidevending
-        let currentPage = 0;
-        function nextPage() {
-            const bookContent = document.getElementById('book-content');
-            bookContent.classList.add('page-turn');
-            setTimeout(() => {
-                bookContent.classList.remove('page-turn');
-                currentPage++;
-                updatePage();
-            }, 500); // Vent på animation
-        }
-
-        // Opdater sideindhold (simuleret paginering)
-        function updatePage() {
-            const bookContent = document.getElementById('book-content');
-            // For enkelhed scroller vi lidt ned for at simulere en ny side
-            bookContent.scrollTop = currentPage * 500; // Juster efter behov
+            document.getElementById('left-page').classList.remove('page-turn-right', 'page-turn-left');
+            document.getElementById('right-page').classList.remove('page-turn-right', 'page-turn-left');
         }
 
         // Start applikationen
