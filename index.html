@@ -13,7 +13,8 @@
         }
         body {
             font-family: Arial, sans-serif;
-            background: #e8e4d9;
+            background: url('background.png') no-repeat center center fixed, #e8e4d9; /* Brug din baggrund, falder tilbage til grå hvis ikke til stede */
+            background-size: cover;
             color: #333;
             padding: 20px;
             overflow-x: hidden;
@@ -22,10 +23,8 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background: url('https://www.transparenttextures.com/patterns/wood-pattern.png') repeat, #8b6f47;
-            border: 2px solid #5c4033;
-            border-radius: 5px;
-            padding: 20px;
+            background: transparent; /* Fjern træbaggrund, da din baggrund tager over */
+            border: none;
         }
         .shelf {
             display: grid;
@@ -198,7 +197,7 @@
         let currentPage = 0;
         let pages = [];
         let bookList = [];
-        let nextPageUrl = 'https://gutendex.com/books';
+        let nextPageUrl = 'https://gutendex.com/books?limit=10'; // Start med 10 bøger
 
         // Hent bogliste fra Gutendex
         async function fetchBookList() {
@@ -219,15 +218,10 @@
         async function displayBookshelf() {
             const shelvesContainer = document.getElementById('shelves');
             shelvesContainer.innerHTML = '';
-            const shelves = [];
-            for (let i = 0; i < Math.ceil(bookList.length / 10); i++) {
-                const shelf = document.createElement('div');
-                shelf.className = 'shelf';
-                shelves.push(shelf);
-                shelvesContainer.appendChild(shelf);
-            }
-            for (let i = 0; i < bookList.length; i++) {
-                const book = bookList[i];
+            const shelf = document.createElement('div');
+            shelf.className = 'shelf';
+            shelvesContainer.appendChild(shelf);
+            for (const book of bookList) {
                 const bookElement = document.createElement('div');
                 bookElement.className = 'book';
                 const coverUrl = await getBookCover(book);
@@ -237,7 +231,7 @@
                     <div class="author">${book.authors[0]?.name || 'Ukendt forfatter'}</div>
                 `;
                 bookElement.onclick = () => fetchBookContent(book.id);
-                shelves[Math.floor(i / 10)].appendChild(bookElement);
+                shelf.appendChild(bookElement);
             }
         }
 
@@ -364,8 +358,11 @@
             document.getElementById('right-page').classList.remove('page-turn-right', 'page-turn-left');
         }
 
-        // Load flere bøger
-        document.getElementById('load-more').onclick = fetchBookList;
+        // Load flere bøger (5 ad gangen)
+        document.getElementById('load-more').onclick = () => {
+            nextPageUrl = nextPageUrl.replace('limit=10', 'limit=5'); // Reducer til 5 bøger pr. gang
+            fetchBookList();
+        };
 
         // Start applikationen
         fetchBookList();
